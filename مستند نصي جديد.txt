@@ -1,0 +1,48 @@
+import asyncio
+from telethon import TelegramClient, errors
+import time
+import json
+
+api_id = 'API_ID'
+api_hash = 'API_HASH'
+phone_number = '+123456789'  # رقم الهاتف الخاص بحساب تليجرام
+
+client = TelegramClient('session_name', api_id, api_hash)
+
+async def join_groups():
+    await client.start(phone=phone_number)
+
+    with open('groups.txt', 'r') as file:
+        groups = [line.strip() for line in file.readlines()]
+
+    joined = set()
+    try:
+        with open('joined_groups.json', 'r') as jf:
+            joined = set(json.load(jf))
+    except:
+        pass
+
+    for group in groups:
+        if group in joined:
+            continue
+        try:
+            print(f"Joining {group}")
+            await client.join_group(group)
+            print(f"Joined {group} successfully.")
+            joined.add(group)
+            time.sleep(120)  # استراحة بين انضمام وآخر (مثلاً دقيقتين)
+        except errors.FloodWaitError as e:
+            wait_seconds = e.seconds
+            print(f"Flood wait detected, waiting {wait_seconds // 60} minutes.")
+            time.sleep(wait_seconds + 10)  # ينتظر الفترة المطلوبة مع زيادة 10 ثواني
+            continue
+        except Exception as e:
+            print(f"Error joining {group}: {e}")
+            continue
+        finally:
+            with open('joined_groups.json', 'w') as jf:
+                json.dump(list(joined), jf)
+
+    print("Finished joining groups.")
+
+asyncio.run(join_groups())
